@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./SimpleUpgradableProxy.sol";
-import "./SecureBankStorageInterface.sol";
+import {SecureBankStorageInterface} from "./SecureBankStorageInterface.sol";
 
 
 /**
@@ -12,18 +10,18 @@ import "./SecureBankStorageInterface.sol";
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract SecureBankStorage is SecureBankStorageInterface {
-    SimpleUpgradableProxy private bankProxy;
+    address private bankProxy;
     
     mapping (address => uint) private balances;
 
-    constructor(SimpleUpgradableProxy _bankProxy) {
+    constructor(address _bankProxy) {
+        require(_bankProxy != address(0));
         bankProxy = _bankProxy;
     }
 
-    // This modifier ensures that only the latest bank implementation (with the latest security patches) can access a function
+    // Only accept function calls coming from the proxy (using the latest bank implementation respectively)
     modifier onlyLatestVersion() {
-        // This contract gets the address of the latest bank implementation from the proxy
-        require(msg.sender == bankProxy.delegate());
+        require(msg.sender == bankProxy);
         _;
     }
 

@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "remix_tests.sol"; 
-import "../contracts/SimpleUpgradableProxy.sol";
-import "../contracts/SecureBank.sol";
-import "../contracts/SecureBankStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "hardhat/console.sol";
+import {Assert} from "remix_tests.sol"; 
+import {SecureBank} from "../contracts/SecureBank.sol";
+import {BankInterface} from "../contracts/BankInterface.sol";
+import {SecureBankStorage} from "../contracts/SecureBankStorage.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {console} from "hardhat/console.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 
 contract UpgradableBankTest is Ownable, ReentrancyGuard {
-    SimpleUpgradableProxy private bankProxy;
+    ERC1967Proxy private bankProxy;
     SecureBank private bank;
     SecureBankStorage private bankStorage;
 
@@ -20,25 +21,27 @@ contract UpgradableBankTest is Ownable, ReentrancyGuard {
     receive() external payable {}
 
     function beforeAll() external onlyOwner nonReentrant {
-        console.log("UpgradableBankTest owner address: %s", owner());
+        console.log("UpgradableBankTest owner: %s", owner());
         console.log("UpgradableBankTest address: %s", address(this));
         
-        console.log("Deploying bank proxy...");
-        bankProxy = new SimpleUpgradableProxy();
-        console.log("Bank proxy address: %s", address(bankProxy));
-        Assert.equal(bankProxy.delegate(), address(0), "bankProxy delegate should not be set yet");
-        
-        console.log("Deploying bank storage...");
-        bankStorage = new SecureBankStorage(bankProxy);
-        console.log("Bank storage address: %s", address(bankStorage));
-        
         console.log("Deploying bank...");
-        bank = new SecureBank(bankStorage);
+        bank = new SecureBank();
         console.log("Bank address: %s", address(bank));
         
-        console.log("Setting bank proxy delegate...");
-        bankProxy.upgradeDelegate(address(bank));
-        Assert.equal(bankProxy.delegate(), address(bank), "bankProxy delegate should be the bank");
+        console.log("Deploying bank proxy...");
+        bankProxy = new ERC1967Proxy(address(bank), abi.encodeWithSignature("initialize()"));
+        console.log("Bank proxy address: %s", address(bankProxy));
+        
+        console.log("Deploying bank storage...");
+        bankStorage = new SecureBankStorage(address(bankProxy));
+        console.log("Bank storage address: %s", address(bankStorage));
+
+        console.log("Configuring bank to use the bank storage...");
+        SecureBank(payable(address(bankProxy))).setBankStorage(bankStorage);
+        // (bool ok,) = address(bankProxy).call(abi.encodeWithSignature("setBankStorage(address)", address(bankStorage)));
+        // Assert.ok(ok, "setBankStorage failed");
+        console.log("Done.");
+
         console.log("Initialization complete");
     }
 
@@ -47,22 +50,21 @@ contract UpgradableBankTest is Ownable, ReentrancyGuard {
         uint value = 1000000000;
         Assert.equal(msg.value, value, "Different msg.value expected");
         uint startBalance = address(this).balance;
+        BankInterface proxiedBank = BankInterface(payable(address(bankProxy)));
 
         console.log("Depositing money to bank...");
-        (bool depositSuccess,) = address(bankProxy).call{value: value}(abi.encodeWithSignature("deposit()"));
-        Assert.ok(depositSuccess, "Deposit failed");
+        proxiedBank.deposit{value: value}();
         console.log("Done.");
         Assert.equal(address(this).balance, startBalance - value, "Different balance expected");
-        Assert.equal(address(bankProxy).balance, 0, "Bank proxy should habe no balance");
+        Assert.equal(address(bankProxy).balance, 0, "Bank proxy should have no balance");
         Assert.equal(address(bank).balance, 0, "Bank should have no balance");
         Assert.equal(address(bankStorage).balance, value, "Bank storage should have the balance");
 
         console.log("Withdrawing money from bank...");
-        (bool withdrawSuccess,) = address(bankProxy).call(abi.encodeWithSignature("withdrawAll()"));
-        Assert.ok(withdrawSuccess, "Withdraw failed");
+        proxiedBank.withdrawAll();
         console.log("Done.");
         Assert.equal(address(this).balance, startBalance, "Test contract should have his money back");
-        Assert.equal(address(bankProxy).balance, 0, "Bank proxy should habe no balance");
+        Assert.equal(address(bankProxy).balance, 0, "Bank proxy should have no balance");
         Assert.equal(address(bank).balance, 0, "Bank should have no balance");
         Assert.equal(address(bankStorage).balance, value, "Bank storage should have no balance now");
 
