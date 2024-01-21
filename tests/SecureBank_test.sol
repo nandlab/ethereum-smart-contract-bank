@@ -11,7 +11,7 @@ import {console} from "hardhat/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 
-contract UpgradableBankTest is Ownable, ReentrancyGuard {
+contract SecureBankTest is Ownable, ReentrancyGuard {
     ERC1967Proxy private bankProxy;
     SecureBank private bank;
     SecureBankStorage private bankStorage;
@@ -38,8 +38,6 @@ contract UpgradableBankTest is Ownable, ReentrancyGuard {
 
         console.log("Configuring bank to use the bank storage...");
         SecureBank(payable(address(bankProxy))).setBankStorage(bankStorage);
-        // (bool ok,) = address(bankProxy).call(abi.encodeWithSignature("setBankStorage(address)", address(bankStorage)));
-        // Assert.ok(ok, "setBankStorage failed");
         console.log("Done.");
 
         console.log("Initialization complete");
@@ -66,7 +64,7 @@ contract UpgradableBankTest is Ownable, ReentrancyGuard {
         Assert.equal(address(this).balance, startBalance, "Test contract should have his money back");
         Assert.equal(address(bankProxy).balance, 0, "Bank proxy should have no balance");
         Assert.equal(address(bank).balance, 0, "Bank should have no balance");
-        Assert.equal(address(bankStorage).balance, value, "Bank storage should have no balance now");
+        Assert.equal(address(bankStorage).balance, 0, "Bank storage should have no balance now");
 
         console.log("Returning money back to the test owner...");
         (bool success,) = owner().call{value: address(this).balance}("");

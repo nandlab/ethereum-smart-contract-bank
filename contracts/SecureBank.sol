@@ -21,13 +21,11 @@ contract SecureBank is BankInterface, Initializable, OwnableUpgradeable, UUPSUpg
     function initialize() initializer external {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        console.log("SecureBank is initialized");
     }
 
     function setBankStorage(SecureBankStorageInterface _bankStorage) external onlyOwner {
         require(address(bankStorage) == address(0), "Bank storage address already set");
         bankStorage = _bankStorage;
-        console.log("Bank storage set");
     }
 
     constructor() {
