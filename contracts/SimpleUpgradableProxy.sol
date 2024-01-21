@@ -14,7 +14,7 @@ contract SimpleUpgradableProxy {
     address public delegate;
     address private owner = msg.sender;
 
-    fallback() external {
+    fallback() payable external {
         assembly {
             // Load the delegate address into a local variable
             let _target := sload(delegate.slot)
@@ -42,12 +42,13 @@ contract SimpleUpgradableProxy {
         }
     }
 
-    function upgradeDelegate(address payable _newDelegateAddress) external {
+    function upgradeDelegate(address _newDelegateAddress) external {
         require(msg.sender == owner);
         delegate = _newDelegateAddress;
     }
 
     receive() payable external {
-        // You should not send ETH to this proxy contract.
+        // You should not send ETH to this receive() function.
+        // This function is only added to make the compiler happy.
     }
 }

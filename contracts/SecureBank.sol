@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "./BankInterface.sol";
-import "./SecureBankStorage.sol";
+import "./SecureBankStorageInterface.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract SecureBank is BankInterface, ReentrancyGuard {
-    SecureBankStorage private bankStorage;
+    SecureBankStorageInterface private bankStorage;
 
-    constructor(address payable _bankStorage) {
-        bankStorage = SecureBankStorage(_bankStorage);
+    constructor(SecureBankStorageInterface _bankStorage) {
+        bankStorage = _bankStorage;
     }
 
     function deposit() external override payable nonReentrant {
@@ -27,7 +27,7 @@ contract SecureBank is BankInterface, ReentrancyGuard {
     receive() external payable {}
 
     /**
-     * @dev Reentrancy-immune withdrawAll implementation
+     * @dev withdrawAll implementation which is safe against reentrancy attacks
      * This implementation of the withdrawAll function has two protection mechanisms against reentrancy attacks:
      * * nonReentrant modifier to prevent reentrance completely
      * * Send the Ether amount to the user at the end of the function
