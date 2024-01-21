@@ -4,9 +4,11 @@ pragma solidity ^0.8.17;
 /**
  * @title SecureBankStorageInterface
  * @dev Storage interface for the bank
- * It stores all the persistent state of the bank, which is:
+ * This interface stores all the persistent state of the bank, which is:
  * * Balance of each customer address
  * * Bank's Ether in the contract balance
+ * This interface follows the eternal storage pattern,
+ * see: https://fravoll.github.io/solidity-patterns/eternal_storage.html
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 interface SecureBankStorageInterface {

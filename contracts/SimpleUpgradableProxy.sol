@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// import "@openzeppelin/contracts/proxy/Proxy.sol";
-
 
 /**
  * @title SimpleUpgradableProxy
- * @dev Proxy which forwards function calls to a delegate contract
+ * @dev Proxy which forwards function calls to a delegate contract.
+ * This contract is based on the proxy delegate pattern,
+ * see: https://fravoll.github.io/solidity-patterns/proxy_delegate.html
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract SimpleUpgradableProxy {
@@ -16,6 +16,9 @@ contract SimpleUpgradableProxy {
 
     fallback() external {
         assembly {
+            // Load the delegate address into a local variable
+            let _target := sload(delegate.slot)
+
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
             // Solidity scratch pad at memory position 0.
@@ -23,7 +26,7 @@ contract SimpleUpgradableProxy {
 
             // Call the implementation.
             // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas(), delegate.slot, 0, calldatasize(), 0, 0)
+            let result := delegatecall(gas(), _target, 0, calldatasize(), 0, 0)
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize())
