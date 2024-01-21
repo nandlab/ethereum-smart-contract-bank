@@ -18,14 +18,20 @@ contract SecureBank is BankInterface, ReentrancyGuard {
     }
 
     function deposit() external override payable nonReentrant {
-        (bool success,) = address(bankStorage).call{value: msg.value}("");
-        require(success);
         uint balance = bankStorage.getBalance(msg.sender);
         bankStorage.setBalance(msg.sender, balance + msg.value);
+        (bool success,) = address(bankStorage).call{value: msg.value}("");
+        require(success);
     }
 
     receive() external payable {}
 
+    /**
+     * @dev Reentrancy-immune withdrawAll implementation
+     * This implementation of the withdrawAll function has two protection mechanisms against reentrancy attacks:
+     * * nonReentrant modifier to prevent reentrance completely
+     * * Send the Ether amount to the user at the end of the function
+     */
     function withdrawAll() external override nonReentrant {
         uint amount = bankStorage.getBalance(msg.sender);
         bankStorage.setBalance(msg.sender, 0);
