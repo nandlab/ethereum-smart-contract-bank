@@ -29,7 +29,7 @@ contract SecureBankTest is Ownable, ReentrancyGuard {
         console.log("Bank address: %s", address(bank));
         
         console.log("Deploying bank proxy...");
-        bankProxy = new ERC1967Proxy(address(bank), abi.encodeWithSignature("initialize()"));
+        bankProxy = new ERC1967Proxy(address(bank), abi.encodeWithSignature("initialize(address)", address(0)));
         console.log("Bank proxy address: %s", address(bankProxy));
         
         console.log("Deploying bank storage...");

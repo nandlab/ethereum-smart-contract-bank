@@ -18,13 +18,20 @@ import {console} from "hardhat/console.sol";
 contract SecureBank is BankInterface, Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuard {
     SecureBankStorageInterface private bankStorage;
 
-    function initialize() initializer external {
+    /**
+     * @dev Initialize the SecureBank contract
+     * bankStorage can be set either here or later with the setBankStorage function.
+     * To set it later, just pass the zero address here.
+     */
+    function initialize(SecureBankStorageInterface _bankStorage) initializer external {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        bankStorage = _bankStorage;
     }
 
     function setBankStorage(SecureBankStorageInterface _bankStorage) external onlyOwner {
-        require(address(bankStorage) == address(0), "Bank storage address already set");
+        require(address(bankStorage) == address(0), "Bank storage address is already set");
+        require(address(_bankStorage) != address(0), "Bank storage address cannot be zero");
         bankStorage = _bankStorage;
     }
 
@@ -32,7 +39,12 @@ contract SecureBank is BankInterface, Initializable, OwnableUpgradeable, UUPSUpg
         _disableInitializers();
     }
 
-    function deposit() external override payable nonReentrant {
+    modifier bankStorageSet {
+        require(address(bankStorage) != address(0));
+        _;
+    }
+
+    function deposit() external override payable bankStorageSet nonReentrant {
         uint balance = bankStorage.getBalance(msg.sender);
         bankStorage.setBalance(msg.sender, balance + msg.value);
         (bool success,) = address(bankStorage).call{value: msg.value}("");
@@ -47,7 +59,7 @@ contract SecureBank is BankInterface, Initializable, OwnableUpgradeable, UUPSUpg
      * * nonReentrant modifier to prevent reentrance completely
      * * Send the Ether amount to the user at the end of the function
      */
-    function withdrawAll() external override nonReentrant {
+    function withdrawAll() external override bankStorageSet nonReentrant {
         uint amount = bankStorage.getBalance(msg.sender);
         bankStorage.setBalance(msg.sender, 0);
         bankStorage.withdrawEther(amount);
